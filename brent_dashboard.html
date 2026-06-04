@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BrentCasey! — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #dce3ed;
+    --surface: #c8d2e0;
+    --surface2: #b8c5d6;
+    --border: #a8b8cc;
+    --border2: #8fa8c0;
+    --text: #1a2433;
+    --text2: #3d5068;
+    --text3: #6e88a0;
+    --accent: #2563a8;
+    --accent2: #2a7a4a;
+    --accent3: #1a6e99;
+    --red: #b03030;
+    --link: #2563a8;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+  a { color: var(--link); text-decoration: underline; }
+  a:hover { color: #1a4a80; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    font-size: 14px;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: 210px;
+    min-width: 210px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-bottom: 16px;
+  }
+  .sidebar-header {
+    padding: 20px 16px 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+  }
+  .sidebar-header .name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 2px;
+    letter-spacing: 0.03em;
+  }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--text3);
+    text-transform: uppercase;
+    padding: 10px 16px 4px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 16px;
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--text2);
+    border-left: 2px solid transparent;
+    transition: all 0.12s;
+    user-select: none;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active {
+    color: var(--text);
+    border-left-color: var(--accent);
+    background: var(--surface2);
+  }
+  .nav-item .icon { font-size: 13px; opacity: 0.6; width: 14px; text-align: center; }
+  .nav-item.active .icon { opacity: 1; }
+  .status-dot { width: 5px; height: 5px; border-radius: 50%; margin-left: auto; flex-shrink: 0; }
+  .dot-amber { background: var(--accent); }
+  .dot-green { background: var(--accent2); }
+  .divider { height: 1px; background: var(--border); margin: 8px 0; }
+
+  /* lock */
+  .personal-section { display: none; }
+  .personal-section.unlocked { display: block; }
+  #lock-bar { margin: 8px 10px 4px; border: 1px solid var(--border2); border-radius: 4px; overflow: hidden; }
+  #lock-btn {
+    width: 100%; padding: 7px 12px; background: transparent; border: none;
+    cursor: pointer; font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
+    color: var(--text3); display: flex; align-items: center; gap: 7px; transition: color 0.12s, background 0.12s;
+  }
+  #lock-btn:hover { color: var(--text2); background: var(--surface2); }
+  #lock-btn.unlocked { color: var(--accent2); }
+  #pw-input-wrap { display: none; padding: 6px 8px; border-top: 1px solid var(--border); background: var(--surface2); }
+  #pw-input-wrap.visible { display: flex; gap: 6px; }
+  #pw-input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border2); border-radius: 3px;
+    padding: 4px 8px; font-family: var(--mono); font-size: 11px; color: var(--text); outline: none;
+  }
+  #pw-input:focus { border-color: var(--accent); }
+  #pw-submit {
+    background: var(--border2); border: none; border-radius: 3px; padding: 4px 10px;
+    font-family: var(--mono); font-size: 10px; color: var(--text2); cursor: pointer; transition: background 0.1s;
+  }
+  #pw-submit:hover { background: var(--accent); color: #fff; }
+  #pw-error { font-size: 10px; color: var(--red); padding: 3px 8px 5px; display: none; font-family: var(--mono); }
+
+  /* ── MAIN ── */
+  #main { flex: 1; overflow-y: auto; padding: 28px 32px; background: var(--bg); }
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-title { font-family: var(--mono); font-size: 18px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; margin-bottom: 4px; }
+  .page-sub { font-size: 12px; color: var(--text3); margin-bottom: 24px; letter-spacing: 0.02em; }
+
+  .stat-row { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 10px 16px; min-width: 120px; }
+  .stat-label { font-size: 10px; color: var(--text3); font-family: var(--mono); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 5px; }
+  .stat-val { font-size: 18px; font-weight: 500; color: var(--text); font-family: var(--mono); }
+  .stat-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  .section-head {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text3); margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border);
+  }
+  .task-list { margin-bottom: 22px; }
+  .task {
+    display: flex; align-items: flex-start; gap: 10px; padding: 9px 12px;
+    border: 1px solid var(--border); border-radius: 4px; margin-bottom: 5px;
+    background: var(--surface); transition: border-color 0.12s; cursor: pointer;
+  }
+  .task:hover { border-color: var(--border2); }
+  .task.done { opacity: 0.45; }
+  .task-check {
+    width: 14px; height: 14px; border: 1px solid var(--border2); border-radius: 2px;
+    flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: var(--accent2); transition: all 0.1s;
+  }
+  .task.done .task-check { background: var(--surface2); border-color: var(--accent2); }
+  .task-text { flex: 1; font-size: 13px; color: var(--text); line-height: 1.4; }
+  .task.done .task-text { text-decoration: line-through; color: var(--text3); }
+  .badge { font-family: var(--mono); font-size: 9px; padding: 2px 7px; border-radius: 2px; letter-spacing: 0.04em; flex-shrink: 0; }
+  .badge-amber { background: #fff0d0; color: #7a4a00; border: 1px solid #d4a840; }
+  .badge-green { background: #d4f0e0; color: #1a5a30; border: 1px solid #6abf88; }
+  .badge-blue  { background: #d0e4f8; color: #1a3f70; border: 1px solid #6099d0; }
+  .badge-gray  { background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
+
+  .note-block {
+    background: #eaf0f8; border: 1px solid var(--border); border-left: 2px solid var(--accent);
+    border-radius: 4px; padding: 12px 16px; font-size: 13px; color: var(--text2);
+    line-height: 1.7; margin-bottom: 22px; white-space: pre-wrap; min-height: 80px;
+  }
+  .note-block:focus { outline: none; border-color: var(--border2); border-left-color: var(--accent); color: var(--text); }
+  .edit-hint { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-bottom: 6px; letter-spacing: 0.04em; }
+
+  /* add-task row */
+  .add-task-row { display: flex; gap: 6px; margin-top: 4px; margin-bottom: 22px; }
+  .add-task-input {
+    flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+    padding: 7px 10px; font-family: var(--sans); font-size: 12px; color: var(--text); outline: none;
+  }
+  .add-task-input:focus { border-color: var(--border2); }
+  .add-task-input::placeholder { color: var(--text3); }
+  .add-task-select {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+    padding: 7px 8px; font-family: var(--mono); font-size: 10px; color: var(--text2); outline: none; cursor: pointer;
+  }
+  .add-task-btn {
+    background: var(--border2); border: none; border-radius: 4px; padding: 7px 14px;
+    font-family: var(--mono); font-size: 10px; color: var(--text2); cursor: pointer; transition: background 0.1s;
+  }
+  .add-task-btn:hover { background: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<div id="sidebar">
+  <div class="sidebar-header">
+    <div class="name">BrentCasey!</div>
+    <div class="role">fnord</div>
+  </div>
+
+  <div class="section-label">Mics — Design</div>
+  <div class="nav-item active" onclick="show('jc37',this)"><span class="icon">◈</span> JC37</div>
+  <div class="nav-item" onclick="show('bc37',this)"><span class="icon">◈</span> BC37<span class="status-dot dot-amber"></span></div>
+  <div class="nav-item" onclick="show('sd_tube',this)"><span class="icon">◇</span> SD mic — tube</div>
+  <div class="nav-item" onclick="show('sd_ss',this)"><span class="icon">◇</span> SD mic — solid state</div>
+  <div class="nav-item" onclick="show('sw',this)"><span class="icon">⬡</span> SolidWorks / drawings</div>
+
+  <div class="divider"></div>
+
+  <div class="section-label">Restoration</div>
+  <div class="nav-item" onclick="show('c500',this)"><span class="icon">◎</span> C-500 / C37A<span class="status-dot dot-amber"></span></div>
+  <div class="nav-item" onclick="show('genq',this)"><span class="icon">◎</span> General queue</div>
+
+  <div class="divider"></div>
+
+  <div class="section-label">Manufacturing</div>
+  <div class="nav-item" onclick="show('mfg',this)"><span class="icon">▦</span> 797 Audio</div>
+
+  <div class="divider"></div>
+
+  <div id="lock-bar">
+    <button id="lock-btn" onclick="toggleLock()">
+      <span id="lock-icon">🔒</span>
+      <span id="lock-label">personal sections</span>
+    </button>
+    <div id="pw-input-wrap">
+      <input id="pw-input" type="password" placeholder="password" onkeydown="if(event.key==='Enter')checkPw()">
+      <button id="pw-submit" onclick="checkPw()">go</button>
+    </div>
+    <div id="pw-error">incorrect</div>
+  </div>
+
+  <div class="personal-section" id="ps-vehicles">
+    <div class="section-label">Vehicles</div>
+    <div class="nav-item" onclick="show('rx8',this)"><span class="icon">◉</span> RX-8</div>
+    <div class="nav-item" onclick="show('vangaru',this)"><span class="icon">◉</span> Vangaru</div>
+    <div class="nav-item" onclick="show('klr',this)"><span class="icon">◉</span> KLR650</div>
+  </div>
+
+  <div class="personal-section" id="ps-other">
+    <div class="divider"></div>
+    <div class="section-label">Other</div>
+    <div class="nav-item" onclick="show('house',this)"><span class="icon">⌂</span> House</div>
+    <div class="nav-item" onclick="show('shed',this)"><span class="icon">⬜</span> Shed</div>
+    <div class="nav-item" onclick="show('music',this)"><span class="icon">♩</span> Music / composition</div>
+    <div class="nav-item" onclick="show('justin',this)"><span class="icon">◷</span> Justin</div>
+  </div>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main">
+
+  <!-- JC37 -->
+  <div class="page" id="pg-jc37">
+    <div class="page-title">JC37</div>
+    <div class="page-sub">large diaphragm tube — production model</div>
+    <div class="section-head">tasks</div>
+    <div class="task-list" id="tl-jc37"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" placeholder="add task…" onkeydown="if(event.key==='Enter')addTask('jc37',this)">
+      <select class="add-task-select" id="sel-jc37">
+        <option value="badge-gray">backlog</option>
+        <option value="badge-amber">active</option>
+        <option value="badge-blue">pending</option>
+        <option value="badge-green">done</option>
+      </select>
+      <button class="add-task-btn" onclick="addTaskFromRow('jc37')">+ add</button>
+    </div>
+    <div class="section-head">notes</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-jc37" oninput="saveNote('jc37')">Tamura transformer platform, metallurgic analysis complete. Listening tests at Sunset Sound. Shared transformer/capsule platform with BC37 target. Lamination reproduction done in collaboration with Tamura Transformers Japan.</div>
+  </div>
+
+  <!-- BC37 -->
+  <div class="page" id="pg-bc37">
+    <div class="page-title">BC37</div>
+    <div class="page-sub">large diaphragm solid state — JFE2140 topology</div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-label">status</div><div class="stat-val" style="font-size:13px;margin-top:2px">in progress</div><div class="stat-sub">HPF + pad remaining</div></div>
+      <div class="stat"><div class="stat-label">capsule bias</div><div class="stat-val">1GΩ</div><div class="stat-sub">polarization arch</div></div>
+      <div class="stat"><div class="stat-label">output</div><div class="stat-val" style="font-size:13px;margin-top:2px">XFO-coupled</div><div class="stat-sub">balanced</div></div>
+    </div>
+    <div class="section-head">tasks</div>
+    <div class="task-list" id="tl-bc37"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" placeholder="add task…" onkeydown="if(event.key==='Enter')addTask('bc37',this)">
+      <select class="add-task-select" id="sel-bc37">
+        <option value="badge-gray">backlog</option>
+        <option value="badge-amber">active</option>
+        <option value="badge-blue">pending</option>
+        <option value="badge-green">done</option>
+      </select>
+      <button class="add-task-btn" onclick="addTaskFromRow('bc37')">+ add</button>
+    </div>
+    <div class="section-head">notes</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-bc37" oninput="saveNote('bc37')">Hartley osc / Cockcroft-Walton polarization confirmed. JFE2140 source follower / current source topology locked. Shared transformer platform with JC37 target.</div>
+  </div>
+
+  <!-- SD tube -->
+  <div class="page" id="pg-sd_tube">
+    <div class="page-title">SD mic — tube</div>
+    <div class="page-sub">small diaphragm tube variant</div>
+    <div class="section-head">tasks</div>
+    <div class="task-list" id="tl-sd_tube"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" placeholder="add task…" onkeydown="if(event.key==='Enter')addTask('sd_tube',this)">
+      <select class="add-task-select" id="sel-sd_tube">
+        <option value="badge-gray">backlog</option>
+        <option value="badge-amber">active</option>
+        <option value="badge-blue">pending</option>
+        <option value="badge-green">done</option>
+      </select>
+      <button class="add-task-btn" onclick="addTaskFromRow('sd_tube')">+ add</button>
+    </div>
+    <div class="section-head">notes</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-sd_tube" oninput="saveNote('sd_tube')">Design notes, specs, and status here.</div>
+  </div>
+
+  <!-- SD solid state -->
+  <div class="page" id="pg-sd_ss">
+    <div class="page-title">SD mic — solid state</div>
+    <div class="page-sub">small diaphragm solid state variant</div>
+    <div class="section-head">tasks</div>
+    <div class="task-list" id="tl-sd_ss"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" placeholder="add task…" onkeydown="if(event.key==='Enter')addTask('sd_ss',this)">
+      <select class="add-task-select" id="sel-sd_ss">
+        <option value="badge-gray">backlog</option>
+        <option value="badge-amber">active</option>
+        <option value="badge-blue">pending</option>
+        <option value="badge-green">done</option>
+      </select>
+      <button class="add-task-btn" onclick="addTaskFromRow('sd_ss')">+ add</button>
+    </div>
+    <div class="section-head">notes</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-sd_ss" oninput="saveNote('sd_ss')">Design notes, specs, and status here.</div>
+  </div>
+
+  <!-- SolidWorks -->
+  <div class="page active" id="pg-sw">
+    <div class="page-title">SolidWorks / drawings</div>
+    <div class="page-sub">all mic models — cross-cutting manufacturing drawings</div>
+    <div class="section-head">tasks</div>
+    <div class="task-list" id="tl-sw"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" placeholder="add task…" onkeydown="if(event.key==='Enter')addTask('sw',this)">
+      <select class="add-task-select" id="sel-sw">
+        <option value="badge-gray">backlog</option>
+        <option value="badge-amber">active</option>
+        <option value="badge-blue">pending</option>
+        <option value="badge-green">done</option>
+      </select>
+      <button class="add-task-btn" onclick="addTaskFromRow('sw')">+ add</button>
+    </div>
+    <div class="section-head">notes</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-sw" oninput="saveNote('sw')">SolidWorks 2014. Rhino upgrade path under consideration for surface modeling. Bilingual EN/ZH callouts will reduce ambiguity with 797 machinists. Priority: JC37 next production run.</div>
+  </div>
+
+  <!-- C-500 / C37A -->
+  <div class="page" id="pg-c500">
+    <div class="page-title">C-500 / C37A restoration</div>
+    <div class="page-sub">Sony vintage — client work, Sunset Sound</div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-label">client</div><div class="stat-val" style="font-size:13px;margin-top:2px">Sunset Sound</div></div>
+      <div class="stat"><div class="stat-label">units</div><div class="stat-val">2</div><div class="stat-sub">C-500 + C37A</div></div>
+      <div class="stat"><div class="stat-label">PCB tool</div><div class="stat-val" style="font-size:13px;margin-top:2px">Altium</div></div>
+    </div>
+    <div class="section-head">tasks</div>
+    <div class="task-list" id="tl-c500"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" placeholder="add task…" onkeydown="if(event.key==='Enter')addTask('c500',this)">
+      <select class="add-task-select" id="sel-c500">
+        <option value="badge-gray">backlog</option>
+        <option value="badge-amber">active</option>
+        <option value="badge-blue">pending</option>
+        <option value="badge-green">done</option>
+      </select>
+      <button class="add-task-btn" onclick="addTaskFromRow('c500')">+ add</button>
+    </div>
+    <div class="section-head">notes</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-c500" oninput="saveNote('c500')">Altium Designer PCB session complete for layout. High-Z topology confirmed with JFE2140. Peripheral ground plane pour done.</div>
+  </div>
+
+  <!-- General queue -->
+  <div class="page" id="pg-genq">
+    <div class="page-title">General restoration queue</div>
+    <div class="page-sub">incoming and backlog units</div>
+    <div class="section-head">queue</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-genq" oninput="saveNote('genq')">[client] — [mic model] — [status]
+</div>
+  </div>
+
+  <!-- 797 -->
+  <div class="page" id="pg-mfg">
+    <div class="page-title">797 Audio / manufacturing</div>
+    <div class="page-sub">Beijing contract manufacturing</div>
+    <div class="section-head">tasks</div>
+    <div class="task-list" id="tl-mfg"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" placeholder="add task…" onkeydown="if(event.key==='Enter')addTask('mfg',this)">
+      <select class="add-task-select" id="sel-mfg">
+        <option value="badge-gray">backlog</option>
+        <option value="badge-amber">active</option>
+        <option value="badge-blue">pending</option>
+        <option value="badge-green">done</option>
+      </select>
+      <button class="add-task-btn" onclick="addTaskFromRow('mfg')">+ add</button>
+    </div>
+    <div class="section-head">notes</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-mfg" oninput="saveNote('mfg')">PO tracking, lead times, drawing revision log, and communication notes here.</div>
+  </div>
+
+  <!-- RX-8 -->
+  <div class="page" id="pg-rx8">
+    <div class="page-title">RX-8</div>
+    <div class="page-sub">DNA Garage, Santa Ana — rotary rebuild</div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-label">shop</div><div class="stat-val" style="font-size:13px;margin-top:2px">DNA Garage</div><div class="stat-sub">Santa Ana</div></div>
+      <div class="stat"><div class="stat-label">engine</div><div class="stat-val" style="font-size:13px;margin-top:2px">13B rebuild</div></div>
+    </div>
+    <div class="section-head">tasks</div>
+    <div class="task-list" id="tl-rx8"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" placeholder="add task…" onkeydown="if(event.key==='Enter')addTask('rx8',this)">
+      <select class="add-task-select" id="sel-rx8">
+        <option value="badge-gray">backlog</option>
+        <option value="badge-amber">active</option>
+        <option value="badge-blue">pending</option>
+        <option value="badge-green">done</option>
+      </select>
+      <button class="add-task-btn" onclick="addTaskFromRow('rx8')">+ add</button>
+    </div>
+    <div class="section-head">notes</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-rx8" oninput="saveNote('rx8')">Rotary rebuild underway at DNA Garage. Log parts, invoices, and shop updates here.</div>
+  </div>
+
+  <!-- Vangaru -->
+  <div class="page" id="pg-vangaru">
+    <div class="page-title">Vangaru</div>
+    <div class="page-sub">Westfalia Vanagon — Westy World, Chico</div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-label">shop</div><div class="stat-val" style="font-size:13px;margin-top:2px">Westy World</div><div class="stat-sub">Chico, CA</div></div>
+    </div>
+    <div class="section-head">tasks</div>
+    <div class="task-list" id="tl-vangaru"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" placeholder="add task…" onkeydown="if(event.key==='Enter')addTask('vangaru',this)">
+      <select class="add-task-select" id="sel-vangaru">
+        <option value="badge-gray">backlog</option>
+        <option value="badge-amber">active</option>
+        <option value="badge-blue">pending</option>
+        <option value="badge-green">done</option>
+      </select>
+      <button class="add-task-btn" onclick="addTaskFromRow('vangaru')">+ add</button>
+    </div>
+    <div class="section-head">notes</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-vangaru" oninput="saveNote('vangaru')">Full restoration underway. Log parts, invoices, timeline, and shop communication here.</div>
+  </div>
+
+  <!-- KLR650 -->
+  <div class="page" id="pg-klr">
+    <div class="page-title">KLR650</div>
+    <div class="page-sub">primary transportation</div>
+    <div class="section-head">tasks</div>
+    <div class="task-list" id="tl-klr"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" placeholder="add task…" onkeydown="if(event.key==='Enter')addTask('klr',this)">
+      <select class="add-task-select" id="sel-klr">
+        <option value="badge-gray">backlog</option>
+        <option value="badge-amber">active</option>
+        <option value="badge-blue">pending</option>
+        <option value="badge-green">done</option>
+      </select>
+      <button class="add-task-btn" onclick="addTaskFromRow('klr')">+ add</button>
+    </div>
+    <div class="section-head">notes</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-klr" oninput="saveNote('klr')">Log upcoming service, parts needed, and mileage notes here.</div>
+  </div>
+
+  <!-- House -->
+  <div class="page" id="pg-house">
+    <div class="page-title">House</div>
+    <div class="page-sub"></div>
+    <div class="section-head">tasks</div>
+    <div class="task-list" id="tl-house"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" placeholder="add task…" onkeydown="if(event.key==='Enter')addTask('house',this)">
+      <select class="add-task-select" id="sel-house">
+        <option value="badge-gray">backlog</option>
+        <option value="badge-amber">active</option>
+        <option value="badge-blue">pending</option>
+        <option value="badge-green">done</option>
+      </select>
+      <button class="add-task-btn" onclick="addTaskFromRow('house')">+ add</button>
+    </div>
+    <div class="section-head">notes</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-house" oninput="saveNote('house')">Projects, repairs, and to-dos here.</div>
+  </div>
+
+  <!-- Shed -->
+  <div class="page" id="pg-shed">
+    <div class="page-title">Shed</div>
+    <div class="page-sub"></div>
+    <div class="section-head">tasks</div>
+    <div class="task-list" id="tl-shed"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" placeholder="add task…" onkeydown="if(event.key==='Enter')addTask('shed',this)">
+      <select class="add-task-select" id="sel-shed">
+        <option value="badge-gray">backlog</option>
+        <option value="badge-amber">active</option>
+        <option value="badge-blue">pending</option>
+        <option value="badge-green">done</option>
+      </select>
+      <button class="add-task-btn" onclick="addTaskFromRow('shed')">+ add</button>
+    </div>
+    <div class="section-head">notes</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-shed" oninput="saveNote('shed')">Inventory, projects, and organization here.</div>
+  </div>
+
+  <!-- Music -->
+  <div class="page" id="pg-music">
+    <div class="page-title">Music / composition</div>
+    <div class="page-sub">electronic music projects</div>
+    <div class="section-head">tasks</div>
+    <div class="task-list" id="tl-music"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" placeholder="add task…" onkeydown="if(event.key==='Enter')addTask('music',this)">
+      <select class="add-task-select" id="sel-music">
+        <option value="badge-gray">backlog</option>
+        <option value="badge-amber">active</option>
+        <option value="badge-blue">pending</option>
+        <option value="badge-green">done</option>
+      </select>
+      <button class="add-task-btn" onclick="addTaskFromRow('music')">+ add</button>
+    </div>
+    <div class="section-head">notes</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-music" oninput="saveNote('music')">Active compositions, gear notes, session ideas, and project status here.</div>
+  </div>
+
+  <!-- Justin -->
+  <div class="page" id="pg-justin">
+    <div class="page-title">Justin</div>
+    <div class="page-sub">downhill skateboarding — competitive schedule</div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-label">ranking</div><div class="stat-val">~8th</div><div class="stat-sub">North America</div></div>
+      <div class="stat"><div class="stat-label">age</div><div class="stat-val">23</div></div>
+    </div>
+    <div class="section-head">tasks</div>
+    <div class="task-list" id="tl-justin"></div>
+    <div class="add-task-row">
+      <input class="add-task-input" placeholder="add task…" onkeydown="if(event.key==='Enter')addTask('justin',this)">
+      <select class="add-task-select" id="sel-justin">
+        <option value="badge-gray">backlog</option>
+        <option value="badge-amber">active</option>
+        <option value="badge-blue">pending</option>
+        <option value="badge-green">done</option>
+      </select>
+      <button class="add-task-btn" onclick="addTaskFromRow('justin')">+ add</button>
+    </div>
+    <div class="section-head">notes</div>
+    <div class="edit-hint">— click to edit · auto-saves</div>
+    <div class="note-block" contenteditable="true" id="note-justin" oninput="saveNote('justin')">Competition schedule, travel logistics, and support notes here.</div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ── default tasks (only written to localStorage on first load) ──
+const DEFAULTS = {
+  'tl-jc37': [
+    {text:'Update SW part tolerances for 797 (JC37 priority — next production run)', badge:'badge-amber', done:false},
+    {text:'Bilingual drawing callouts (EN/ZH)', badge:'badge-blue', done:false}
+  ],
+  'tl-bc37': [
+    {text:'Integrate HPF section into full schematic', badge:'badge-amber', done:false},
+    {text:'Add pad section (−10 / −20 dB)', badge:'badge-amber', done:false},
+    {text:'Update SW part tolerances for 797', badge:'badge-blue', done:false},
+    {text:'Bilingual drawing callouts (EN/ZH)', badge:'badge-gray', done:false}
+  ],
+  'tl-sd_tube': [],
+  'tl-sd_ss':   [],
+  'tl-sw': [
+    {text:'Update tolerances for 797 — JC37 (priority: next production run)', badge:'badge-amber', done:false},
+    {text:'Update tolerances for 797 — BC37', badge:'badge-blue', done:false},
+    {text:'Update tolerances for 797 — SD tube', badge:'badge-gray', done:false},
+    {text:'Update tolerances for 797 — SD solid state', badge:'badge-gray', done:false},
+    {text:'Bilingual EN/ZH callouts — all models', badge:'badge-blue', done:false}
+  ],
+  'tl-c500': [
+    {text:'Peripheral ground plane pour', badge:'badge-green', done:true},
+    {text:'High-Z topology / JFE2140 raised gate components', badge:'badge-green', done:true},
+    {text:'Shielded DC-DC converter for capsule polarization', badge:'badge-amber', done:false},
+    {text:'TEF25 capsule measurement / validation', badge:'badge-blue', done:false}
+  ],
+  'tl-mfg':    [],
+  'tl-rx8':    [],
+  'tl-vangaru':[],
+  'tl-klr': [
+    {text:'Valve clearance inspection', badge:'badge-green', done:true},
+    {text:'Carburetor service', badge:'badge-green', done:true},
+    {text:'Kickstand switch diagnosis', badge:'badge-green', done:true},
+    {text:'Sprocket / chain assessment', badge:'badge-green', done:true}
+  ],
+  'tl-house':  [],
+  'tl-shed':   [],
+  'tl-music':  [],
+  'tl-justin': [
+    {text:'Isle of Man competition — July (travel routing)', badge:'badge-blue', done:false}
+  ]
+};
+
+const PAGES = ['jc37','bc37','sd_tube','sd_ss','sw','c500','genq','mfg','rx8','vangaru','klr','house','shed','music','justin'];
+const PERSONAL_PAGES = ['rx8','vangaru','klr','house','shed','music','justin'];
+
+// ── localStorage helpers ──
+function lsKey(k){ return 'bcd_' + k; }
+function lsSave(k,v){ try{ localStorage.setItem(lsKey(k), JSON.stringify(v)); }catch(e){} }
+function lsLoad(k){ try{ const v=localStorage.getItem(lsKey(k)); return v?JSON.parse(v):null; }catch(e){ return null; } }
+
+// ── notes ──
+function saveNote(id){
+  const el = document.getElementById('note-' + id);
+  if(el) lsSave('note-' + id, el.innerText);
+}
+function loadNotes(){
+  PAGES.forEach(id => {
+    const el = document.getElementById('note-' + id);
+    if(!el) return;
+    const saved = lsLoad('note-' + id);
+    if(saved !== null) el.innerText = saved;
+  });
+}
+
+// ── tasks ──
+function renderTask(listId, task, idx){
+  const list = document.getElementById(listId);
+  if(!list) return;
+  const div = document.createElement('div');
+  div.className = 'task' + (task.done?' done':'');
+  div.innerHTML = `<div class="task-check">${task.done?'✓':''}</div><div class="task-text">${task.text}</div><span class="badge ${task.badge}">${badgeLabel(task.badge)}</span>`;
+  div.onclick = () => toggleTask(div, listId, idx);
+  list.appendChild(div);
+}
+
+function badgeLabel(b){
+  return {
+    'badge-amber':'active','badge-green':'done',
+    'badge-blue':'pending','badge-gray':'backlog'
+  }[b] || 'backlog';
+}
+
+function loadTasks(){
+  Object.keys(DEFAULTS).forEach(listId => {
+    const saved = lsLoad(listId);
+    const tasks = (saved !== null) ? saved : DEFAULTS[listId];
+    if(saved === null) lsSave(listId, tasks); // seed on first load
+    const list = document.getElementById(listId);
+    if(list) list.innerHTML = '';
+    tasks.forEach((t,i) => renderTask(listId, t, i));
+  });
+}
+
+function toggleTask(el, listId, idx){
+  const tasks = lsLoad(listId) || [];
+  tasks[idx].done = !tasks[idx].done;
+  lsSave(listId, tasks);
+  el.classList.toggle('done');
+  const check = el.querySelector('.task-check');
+  check.textContent = tasks[idx].done ? '✓' : '';
+}
+
+function addTask(listId, inputEl){
+  const text = inputEl.value.trim();
+  if(!text) return;
+  const sel = document.getElementById('sel-' + listId.replace('tl-',''));
+  const badge = sel ? sel.value : 'badge-gray';
+  const tasks = lsLoad('tl-' + listId) || lsLoad(listId) || [];
+
+  // figure out correct key
+  const key = document.getElementById('tl-' + listId) ? 'tl-' + listId : listId;
+  const taskList = lsLoad(key) || [];
+  const newTask = {text, badge, done:false};
+  taskList.push(newTask);
+  lsSave(key, taskList);
+  renderTask(key, newTask, taskList.length-1);
+  inputEl.value = '';
+}
+
+function addTaskFromRow(pageId){
+  const input = document.querySelector(`#pg-${pageId} .add-task-input`);
+  if(input) addTask(pageId, input);
+}
+
+// override addTask to use pageId directly
+function addTask(pageId, inputEl){
+  const text = inputEl ? inputEl.value.trim() : '';
+  if(!text) return;
+  const sel = document.getElementById('sel-' + pageId);
+  const badge = sel ? sel.value : 'badge-gray';
+  const key = 'tl-' + pageId;
+  const tasks = lsLoad(key) || [];
+  const newTask = {text, badge, done:false};
+  tasks.push(newTask);
+  lsSave(key, tasks);
+  renderTask(key, newTask, tasks.length-1);
+  if(inputEl) inputEl.value = '';
+}
+
+// re-wire toggleTask to use index correctly after dynamic adds
+function renderTask(listId, task, idx){
+  const list = document.getElementById(listId);
+  if(!list) return;
+  const div = document.createElement('div');
+  div.className = 'task' + (task.done?' done':'');
+  div.innerHTML = `<div class="task-check">${task.done?'✓':''}</div><div class="task-text">${escHtml(task.text)}</div><span class="badge ${task.badge}">${badgeLabel(task.badge)}</span>`;
+  div.addEventListener('click', function(){
+    const tasks = lsLoad(listId) || [];
+    // find index by position in DOM
+    const allTasks = list.querySelectorAll('.task');
+    const i = Array.from(allTasks).indexOf(div);
+    if(i < 0) return;
+    tasks[i].done = !tasks[i].done;
+    lsSave(listId, tasks);
+    div.classList.toggle('done');
+    div.querySelector('.task-check').textContent = tasks[i].done ? '✓' : '';
+  });
+  list.appendChild(div);
+}
+
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── nav ──
+function show(key, el){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pg = document.getElementById('pg-' + key);
+  if(pg) pg.classList.add('active');
+  if(el) el.classList.add('active');
+}
+
+// ── lock ──
+function toggleLock(){
+  const wrap = document.getElementById('pw-input-wrap');
+  const btn = document.getElementById('lock-btn');
+  if(btn.classList.contains('unlocked')){
+    btn.classList.remove('unlocked');
+    document.getElementById('lock-icon').textContent = '🔒';
+    document.getElementById('lock-label').textContent = 'personal sections';
+    document.querySelectorAll('.personal-section').forEach(el => el.classList.remove('unlocked'));
+    wrap.classList.remove('visible');
+    const active = document.querySelector('.page.active');
+    if(active && PERSONAL_PAGES.some(p => active.id === 'pg-'+p)){
+      show('jc37', document.querySelector('.nav-item'));
+    }
+  } else {
+    wrap.classList.toggle('visible');
+    if(wrap.classList.contains('visible')) document.getElementById('pw-input').focus();
+  }
+}
+
+async function sha256(msg){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkPw(){
+  const val = document.getElementById('pw-input').value;
+  const err = document.getElementById('pw-error');
+  // change the string below to update the password
+  if(val === '14Metoaccess!'){
+    document.getElementById('lock-btn').classList.add('unlocked');
+    document.getElementById('lock-icon').textContent = '🔓';
+    document.getElementById('lock-label').textContent = 'personal — unlocked';
+    document.querySelectorAll('.personal-section').forEach(el => el.classList.add('unlocked'));
+    document.getElementById('pw-input-wrap').classList.remove('visible');
+    document.getElementById('pw-input').value = '';
+    err.style.display = 'none';
+  } else {
+    err.style.display = 'block';
+    document.getElementById('pw-input').select();
+  }
+}
+
+document.getElementById('pw-input').addEventListener('keydown', function(e){
+  if(e.key==='Escape'){
+    document.getElementById('pw-input-wrap').classList.remove('visible');
+    document.getElementById('pw-error').style.display = 'none';
+  }
+});
+
+// ── init ──
+loadTasks();
+loadNotes();
+
+// start on sw page since it's the cross-cutting one, or jc37 — pick jc37
+show('jc37', document.querySelector('.nav-item'));
+</script>
+</body>
+</html>
