@@ -169,6 +169,16 @@
   .note-block:focus { outline: none; border-color: var(--border2); border-left-color: var(--accent); color: var(--text); }
   .edit-hint { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-bottom: 6px; letter-spacing: 0.04em; }
 
+  /* filter bar */
+  .filter-bar { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
+  .filter-btn {
+    font-family: var(--mono); font-size: 10px; padding: 3px 10px; border-radius: 20px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text3);
+    cursor: pointer; transition: all 0.12s; letter-spacing: 0.04em;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
   /* add-task row */
   .add-task-row { display: flex; gap: 6px; margin-top: 4px; margin-bottom: 22px; }
   .add-task-input {
@@ -643,17 +653,63 @@ function loadNotes(){
   });
 }
 
-// ── tasks ──
-function renderTask(listId, task, idx){
-  const list = document.getElementById(listId);
-  if(!list) return;
-  const div = document.createElement('div');
-  div.className = 'task' + (task.done?' done':'');
-  div.innerHTML = `<div class="task-check">${task.done?'✓':''}</div><div class="task-text">${task.text}</div><span class="badge ${task.badge}">${badgeLabel(task.badge)}</span>`;
-  div.onclick = () => toggleTask(div, listId, idx);
-  list.appendChild(div);
+// ── filter state ──
+const activeFilters = {}; // pageId -> badge class or 'all'
+
+function filterBar(pageId) {
+  const bar = document.createElement('div');
+  bar.className = 'filter-bar';
+  bar.id = 'filter-' + pageId;
+  const filters = [
+    {label:'all',    val:'all'},
+    {label:'active', val:'badge-amber'},
+    {label:'pending',val:'badge-blue'},
+    {label:'backlog',val:'badge-gray'},
+    {label:'done',   val:'badge-green'},
+  ];
+  filters.forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (f.val==='all'?' active':'');
+    btn.textContent = f.label;
+    btn.dataset.val = f.val;
+    btn.onclick = () => setFilter(pageId, f.val);
+    bar.appendChild(btn);
+  });
+  return bar;
 }
 
+function setFilter(pageId, val){
+  activeFilters[pageId] = val;
+  // update button states
+  const bar = document.getElementById('filter-' + pageId);
+  if(bar) bar.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.val === val);
+  });
+  // show/hide tasks
+  const list = document.getElementById('tl-' + pageId);
+  if(!list) return;
+  list.querySelectorAll('.task').forEach(t => {
+    const badge = t.querySelector('.badge');
+    if(!badge) return;
+    if(val === 'all') {
+      t.style.display = '';
+    } else {
+      t.style.display = badge.classList.contains(val) ? '' : 'none';
+    }
+  });
+}
+
+function injectFilterBars(){
+  PAGES.forEach(pageId => {
+    const list = document.getElementById('tl-' + pageId);
+    if(!list) return;
+    const bar = filterBar(pageId);
+    list.parentNode.insertBefore(bar, list);
+    activeFilters[pageId] = 'all';
+  });
+}
+
+// ── tasks ──
 function badgeLabel(b){
   return {
     'badge-amber':'active','badge-green':'done',
@@ -661,41 +717,49 @@ function badgeLabel(b){
   }[b] || 'backlog';
 }
 
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderTask(listId, task){
+  const list = document.getElementById(listId);
+  if(!list) return;
+  const pageId = listId.replace('tl-','');
+  const div = document.createElement('div');
+  div.className = 'task' + (task.done?' done':'');
+  div.innerHTML = `<div class="task-check">${task.done?'✓':''}</div><div class="task-text">${escHtml(task.text)}</div><span class="badge ${task.badge}">${badgeLabel(task.badge)}</span>`;
+  // apply current filter visibility
+  const f = activeFilters[pageId] || 'all';
+  if(f !== 'all' && !task.badge.includes(f.replace('badge-',''))) {
+    // check properly
+    if(f !== task.badge) div.style.display = 'none';
+  }
+  div.addEventListener('click', function(){
+    const tasks = lsLoad(listId) || [];
+    const allTasks = list.querySelectorAll('.task');
+    const i = Array.from(allTasks).indexOf(div);
+    if(i < 0) return;
+    tasks[i].done = !tasks[i].done;
+    // update badge to green/restore when toggling done
+    lsSave(listId, tasks);
+    div.classList.toggle('done');
+    div.querySelector('.task-check').textContent = tasks[i].done ? '✓' : '';
+    // re-apply filter
+    const cf = activeFilters[pageId] || 'all';
+    if(cf !== 'all') {
+      div.style.display = div.querySelector('.badge').classList.contains(cf) ? '' : 'none';
+    }
+  });
+  list.appendChild(div);
+}
+
 function loadTasks(){
   Object.keys(DEFAULTS).forEach(listId => {
     const saved = lsLoad(listId);
     const tasks = (saved !== null) ? saved : DEFAULTS[listId];
-    if(saved === null) lsSave(listId, tasks); // seed on first load
+    if(saved === null) lsSave(listId, tasks);
     const list = document.getElementById(listId);
     if(list) list.innerHTML = '';
-    tasks.forEach((t,i) => renderTask(listId, t, i));
+    tasks.forEach(t => renderTask(listId, t));
   });
-}
-
-function toggleTask(el, listId, idx){
-  const tasks = lsLoad(listId) || [];
-  tasks[idx].done = !tasks[idx].done;
-  lsSave(listId, tasks);
-  el.classList.toggle('done');
-  const check = el.querySelector('.task-check');
-  check.textContent = tasks[idx].done ? '✓' : '';
-}
-
-function addTask(listId, inputEl){
-  const text = inputEl.value.trim();
-  if(!text) return;
-  const sel = document.getElementById('sel-' + listId.replace('tl-',''));
-  const badge = sel ? sel.value : 'badge-gray';
-  const tasks = lsLoad('tl-' + listId) || lsLoad(listId) || [];
-
-  // figure out correct key
-  const key = document.getElementById('tl-' + listId) ? 'tl-' + listId : listId;
-  const taskList = lsLoad(key) || [];
-  const newTask = {text, badge, done:false};
-  taskList.push(newTask);
-  lsSave(key, taskList);
-  renderTask(key, newTask, taskList.length-1);
-  inputEl.value = '';
 }
 
 function addTaskFromRow(pageId){
@@ -703,7 +767,6 @@ function addTaskFromRow(pageId){
   if(input) addTask(pageId, input);
 }
 
-// override addTask to use pageId directly
 function addTask(pageId, inputEl){
   const text = inputEl ? inputEl.value.trim() : '';
   if(!text) return;
@@ -714,32 +777,11 @@ function addTask(pageId, inputEl){
   const newTask = {text, badge, done:false};
   tasks.push(newTask);
   lsSave(key, tasks);
-  renderTask(key, newTask, tasks.length-1);
+  renderTask(key, newTask);
+  // after adding, if filter doesn't match, re-apply
+  setFilter(pageId, activeFilters[pageId] || 'all');
   if(inputEl) inputEl.value = '';
 }
-
-// re-wire toggleTask to use index correctly after dynamic adds
-function renderTask(listId, task, idx){
-  const list = document.getElementById(listId);
-  if(!list) return;
-  const div = document.createElement('div');
-  div.className = 'task' + (task.done?' done':'');
-  div.innerHTML = `<div class="task-check">${task.done?'✓':''}</div><div class="task-text">${escHtml(task.text)}</div><span class="badge ${task.badge}">${badgeLabel(task.badge)}</span>`;
-  div.addEventListener('click', function(){
-    const tasks = lsLoad(listId) || [];
-    // find index by position in DOM
-    const allTasks = list.querySelectorAll('.task');
-    const i = Array.from(allTasks).indexOf(div);
-    if(i < 0) return;
-    tasks[i].done = !tasks[i].done;
-    lsSave(listId, tasks);
-    div.classList.toggle('done');
-    div.querySelector('.task-check').textContent = tasks[i].done ? '✓' : '';
-  });
-  list.appendChild(div);
-}
-
-function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ── nav ──
 function show(key, el){
@@ -801,10 +843,9 @@ document.getElementById('pw-input').addEventListener('keydown', function(e){
 });
 
 // ── init ──
+injectFilterBars();
 loadTasks();
 loadNotes();
-
-// start on sw page since it's the cross-cutting one, or jc37 — pick jc37
 show('jc37', document.querySelector('.nav-item'));
 </script>
 </body>
